@@ -6,6 +6,11 @@ Tested on:
 - Paramiko 2.11.0
 - IBM Storwize v5100
 
+How it works:
+- In resume, the script works by connecting to ibm storage, collecting info with svcinfo command and then formating a file for zabbix_sender. 
+- A user with monitor access in storage is needed
+- More on how zabbix_sender works: https://man.archlinux.org/man/zabbix_sender.1.en
+
 In template "Template EMC Unity REST-API" in section "Macros" need set these macros:
 - {$STORWIZE_USER}
 - {$STORWIZE_PASSWORD}

@@ -8,6 +8,7 @@ import sys
 import json
 import subprocess
 import paramiko
+
 import logging
 import logging.handlers
 import csv
@@ -156,14 +157,14 @@ def discovering_resources(storwize_user, storwize_password, storwize_ip, storwiz
     xer = []
     try:
         for resource in list_resources:
-            stdin, stdout, stderr = storwize_connection.exec_command('svcinfo {0} -delim :'.format(resource))
+            stdin, stdout, stderr = storwize_connection.exec_command('svcinfo {0} -delim $'.format(resource))
 
             if len(stderr.read()) > 0: # Если случились ошибки, запиши их в лог и выйди из скрипта (If errors occur, than write them to log and correctyl end of ssh-session)
                 storwize_logger.info("Error occurs in ssh command - {0}".format(stderr.read()))
                 storwize_logout(storwize_connection)
                 sys.exit("1100")
             else:
-                resource_in_csv = csv.DictReader(stdout, delimiter = ':') # Create CSV
+                resource_in_csv = csv.DictReader(stdout, delimiter = '$') # Create CSV
 
                 discovered_resource = []
                 storwize_logger.info("Starting discovering resource - {0}".format(resource))
@@ -188,6 +189,15 @@ def discovering_resources(storwize_user, storwize_password, storwize_ip, storwiz
                         one_object_list["{#PORT_ID}"] = one_object["port_id"]
                         one_object_list["{#NODE_NAME}"] = one_object["node_name"]
                         discovered_resource.append(one_object_list)
+                    elif ['lsportip'].count(resource) == 1:
+                        if one_object["IP_address"] == "":
+                            continue
+                        else:                        
+                            one_object_list = {}
+                            one_object_list["{#ID}"] = one_object["id"]
+                            one_object_list["{#NODE_NAME}"] = one_object["node_name"]
+                            one_object_list["{#IP_ADDRESS}"] = one_object["IP_address"]
+                            discovered_resource.append(one_object_list)                    
                     elif ['lsenclosure'].count(resource) == 1:
                         one_object_list = {}
                         one_object_list["{#ID}"] = one_object["id"]
@@ -291,14 +301,14 @@ def get_status_resources(storwize_user, storwize_password, storwize_ip, storwize
 
     try:
         for resource in list_resources:
-            stdin, stdout, stderr = storwize_connection.exec_command('svcinfo {0} -delim :'.format(resource))
+            stdin, stdout, stderr = storwize_connection.exec_command('svcinfo {0} -delim $'.format(resource))
 
             if len(stderr.read()) > 0: # Если случились ошибки, запиши их в лог и выйди из скрипта (If errors occur, then write them to log-file and correctyly end of ssh-session)
                 storwize_logger.error("Error occurs in ssh command - {0}".format(stderr.read()))
                 storwize_logout(storwize_connection)
                 sys.exit("1100")
             else:
-                resource_in_csv = csv.DictReader(stdout, delimiter = ':') # Create CSV
+                resource_in_csv = csv.DictReader(stdout, delimiter = '$') # Create CSV
                 timestampnow = int(time.time())
                 storwize_logger.info("Starting collecting status of resource - {0}".format(resource))
 
@@ -359,6 +369,12 @@ def get_status_resources(storwize_user, storwize_password, storwize_ip, storwize
                     elif ['lsportfc', 'lsportsas'].count(resource) == 1:
                         key_running = "running.{0}.[{1}.{2}]".format(resource, one_object["port_id"], one_object["node_name"])
                         state_resources.append("%s %s %s %s" % (storage_name, key_running, timestampnow, convert_text_to_numeric(one_object["status"])))
+                    elif ['lsportip'].count(resource) == 1:
+                        if one_object["IP_address"] == "":
+                            continue
+                        else:
+                            key_running = "running.{0}.[{1}]".format(resource, one_object["IP_address"])
+                            state_resources.append("%s %s %s %s" % (storage_name, key_running, timestampnow, convert_text_to_numeric(one_object["link_state"])))    
                     elif ['lsvdisk', 'lsmdisk'].count(resource) == 1:
                         key_health = "health.{0}.[{1}]".format(resource, one_object["name"])
                         state_resources.append("%s %s %s %s" % (storage_name, key_health, timestampnow, convert_text_to_numeric(one_object["status"])))
@@ -385,7 +401,7 @@ def main():
     group.add_argument('--status', action='store_true')
     arguments = storwize_parser.parse_args()
 
-    list_resources = ['lsvdisk', 'lsmdisk', 'lsmdiskgrp', 'lsenclosure', 'lsenclosurebattery', 'lsenclosurepsu', 'lsenclosurecanister', 'lsdrive', 'lsportfc', 'lsportsas']
+    list_resources = ['lsvdisk', 'lsmdisk', 'lsmdiskgrp', 'lsenclosure', 'lsenclosurebattery', 'lsenclosurepsu', 'lsenclosurecanister', 'lsdrive', 'lsportfc', 'lsportsas', 'lsportip']
 
     if arguments.discovery:
         storwize_logger.info("********************************* Starting Discovering *********************************")

@@ -8,7 +8,6 @@ import sys
 import json
 import subprocess
 import paramiko
-
 import logging
 import logging.handlers
 import csv

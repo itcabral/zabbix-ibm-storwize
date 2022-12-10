@@ -1,5 +1,5 @@
 # zabbix-ibm-storwize
-Python script for monitoring IBM Storwize storages
+Python script for monitoring IBM Storwize storages v5100 with FC or iSCSI ports.
 
 Tested on:
 - Python 3
